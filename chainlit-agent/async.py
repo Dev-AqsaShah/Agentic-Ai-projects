@@ -1,10 +1,12 @@
-import os  # For accessing environment variables
-import chainlit as cl  # Web UI framework for chat applications
-from dotenv import load_dotenv  # For loading environment variables
-from typing import Optional, Dict  # Type hints for better code clarity
-from agents import Agent, Runner, AsyncOpenAI, OpenAIChatCompletionsModel
-from agents.tool import function_tool
+import os
+
 import requests
+import chainlit as cl
+from agents import Agent, Runner, RunConfig, AsyncOpenAI, OpenAIChatCompletionsModel
+from openai.types.responses import ResponseTextDeltaEvent
+from dotenv import load_dotenv
+from agents.tool import function_tool
+from typing import Optional, Dict
 
 # Load environment variables from .env file
 load_dotenv()
@@ -12,14 +14,21 @@ load_dotenv()
 # Get Gemini API key from environment variables
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 
-# Initialize OpenAI provider with Gemini API settings
+# Step 1: Provider
 provider = AsyncOpenAI(
     api_key=gemini_api_key,
     base_url="https://generativelanguage.googleapis.com/v1beta/openai",
 )
 
-# Configure the language model
+# Step 2: Model
 model = OpenAIChatCompletionsModel(model="gemini-2.0-flash", openai_client=provider)
+
+# Step 3: Config
+config = RunConfig(
+    model=model,
+    model_provider=provider,
+    tracing_disabled=True,
+)
 
 
 @function_tool("get_asharib_data")
@@ -72,7 +81,6 @@ def oauth_callback(
     Handle the OAuth callback from GitHub
     Return the user object if authentication is successful, None otherwise
     """
-
     print(f"Provider: {provider_id}")  # Print provider ID for debugging
     print(f"User data: {raw_user_data}")  # Print user data for debugging
 
@@ -82,28 +90,41 @@ def oauth_callback(
 # Handler for when a new chat session starts
 @cl.on_chat_start
 async def handle_chat_start():
-
-    cl.user_session.set("history", [])  # Initialize empty chat history
+    # Initialize empty message history in the session
+    cl.user_session.set("history", [])
 
     await cl.Message(
-        content="Hello! How can I help you today?"
+        content="Hello, how can I help you today?"
     ).send()  # Send welcome message
 
 
 # Handler for incoming chat messages
 @cl.on_message
 async def handle_message(message: cl.Message):
+    # Get message history from session
+    history = cl.user_session.get("history", [])
 
-    history = cl.user_session.get("history")  # Get chat history from session
+    # Add user message to history
+    history.append({"role": "user", "content": message.content})
 
-    history.append(
-        {"role": "user", "content": message.content}
-    )  # Add user message to history
+    # Create a message for streaming the response
+    msg = cl.Message(content="")
+    await msg.send()
 
-    result = await cl.make_async(Runner.run_sync)(agent, input=history)
+    # Run the agent with streaming
+    result = Runner.run_streamed(
+        agent,
+        input=history,
+        run_config=config,
+    )
 
-    response_text = result.final_output
-    await cl.Message(content=response_text).send()
+    # Stream the tokens as they come
+    async for event in result.stream_events():
+        if event.type == "raw_response_event" and isinstance(
+            event.data, ResponseTextDeltaEvent
+        ):
+            await msg.stream_token(event.data.delta)
 
-    history.append({"role": "assistant", "content": response_text})
+    # Add assistant response to history
+    history.append({"role": "assistant", "content": result.final_output})
     cl.user_session.set("history", history)
