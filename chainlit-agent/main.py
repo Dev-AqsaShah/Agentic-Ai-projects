@@ -1,109 +1,84 @@
-import os  # For accessing environment variables
-import chainlit as cl  # Web UI framework for chat applications
-from dotenv import load_dotenv  # For loading environment variables
-from typing import Optional, Dict  # Type hints for better code clarity
-from agents import Agent, Runner, AsyncOpenAI, OpenAIChatCompletionsModel
-from agents.tool import function_tool
-import requests
+import os
+import chainlit as cl
+from dotenv import load_dotenv
+import openai
 
-# Load environment variables from .env file
+# Load environment variables (like your OpenAI key)
 load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Get Gemini API key from environment variables
-gemini_api_key = os.getenv("GEMINI_API_KEY")
+# Define the subjects you're supporting
+SUBJECTS = [
+    "digital logic design",
+    "object oriented programming",
+    "java",
+    "pre calculus",
+    "civics and community engagement",
+    "expository writing",
+    "financial accounting",
+    "islamic studies"
+]
 
-# Initialize OpenAI provider with Gemini API settings
-provider = AsyncOpenAI(
-    api_key=gemini_api_key,
-    base_url="https://generativelanguage.googleapis.com/v1beta/openai",
-)
-
-# Configure the language model
-model = OpenAIChatCompletionsModel(model="gemini-2.0-flash", openai_client=provider)
-
-
-@function_tool("get_asharib_data")
-def get_asharib_data() -> str:
-    """
-    Fetches profile data about Asharib Ali from his personal API endpoint.
-
-    This function makes a request to Asharib's profile API and returns information
-    about his background, skills, projects, education, work experience, and achievements.
-
-    Returns:
-        str: JSON string containing Asharib Ali's profile information
-    """
-
-    try:
-        response = requests.get("https://www.asharib.xyz/api/profile")
-        if response.status_code == 200:
-            return response.text
-        else:
-            return f"Error fetching data: Status code {response.status_code}"
-    except Exception as e:
-        return f"Error fetching data: {str(e)}"
-
-
-agent = Agent(
-    name="Greeting Agent",
-    instructions="""You are a Greeting Agent designed to provide friendly interactions and information about Asharib Ali.
-
-Your responsibilities:
-1. Greet users warmly when they say hello (respond with 'Salam from Asharib Ali')
-2. Say goodbye appropriately when users leave (respond with 'Allah Hafiz from Asharib Ali')
-3. When users request information about Asharib Ali, use the get_asharib_data tool to retrieve and share his profile information
-4. For any questions not related to greetings or Asharib Ali, politely explain: 'I'm only able to provide greetings and information about Asharib Ali. I can't answer other questions at this time.'
-
-Always maintain a friendly, professional tone and ensure responses are helpful within your defined scope.""",
-    model=model,
-    tools=[get_asharib_data],
-)
-
-
-# Decorator to handle OAuth callback from GitHub
-@cl.oauth_callback
-def oauth_callback(
-    provider_id: str,  # ID of the OAuth provider (GitHub)
-    token: str,  # OAuth access token
-    raw_user_data: Dict[str, str],  # User data from GitHub
-    default_user: cl.User,  # Default user object from Chainlit
-) -> Optional[cl.User]:  # Return User object or None
-    """
-    Handle the OAuth callback from GitHub
-    Return the user object if authentication is successful, None otherwise
-    """
-
-    print(f"Provider: {provider_id}")  # Print provider ID for debugging
-    print(f"User data: {raw_user_data}")  # Print user data for debugging
-
-    return default_user  # Return the default user object
-
-
-# Handler for when a new chat session starts
+# When chat starts, send this intro message
 @cl.on_chat_start
-async def handle_chat_start():
+async def on_chat_start():
+    intro_message = """
+👋 **Hello! I am your Personal Assistant**  
+📘 I specialize in the following subjects for **Sindh University students (Batch 2025)**:
 
-    cl.user_session.set("history", [])  # Initialize empty chat history
+🔹 Digital Logic Design  
+🔹 Object Oriented Programming (Java)  
+🔹 Pre Calculus  
+🔹 Civics and Community Engagement  
+🔹 Expository Writing  
+🔹 Financial Accounting  
+🔹 Islamic Studies  
 
-    await cl.Message(
-        content="Hello! How can I help you today?"
-    ).send()  # Send welcome message
+💬 Ask me anything related to these subjects!
+"""
+    await cl.Message(content=intro_message).send()
+    cl.user_session.set("history", [])
 
+# Function to ask OpenAI a question
+def ask_openai(question):
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # You can use gpt-4 if you have access
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a university tutor helping students of Sindh University, Batch 2025. Give clear, concise answers in simple English."
+            },
+            {
+                "role": "user",
+                "content": question
+            }
+        ]
+    )
+    return response.choices[0].message["content"]
 
-# Handler for incoming chat messages
+# Message handler
 @cl.on_message
-async def handle_message(message: cl.Message):
+async def on_message(message: cl.Message):
+    user_question = message.content.lower()
+    history = cl.user_session.get("history", [])
 
-    history = cl.user_session.get("history")  # Get chat history from session
+    # Check if the question relates to supported subjects
+    if any(subject in user_question for subject in SUBJECTS):
+        # Get answer from OpenAI
+        try:
+            reply = ask_openai(message.content)
+        except Exception as e:
+            reply = f"❌ Error getting answer from OpenAI: {str(e)}"
+    else:
+        reply = (
+            "⚠️ I'm trained to help with specific subjects for "
+            "**Sindh University (Batch 2025)**.\n"
+            "Please ask something related to one of these:\n\n"
+            + ", ".join([s.title() for s in SUBJECTS])
+        )
 
-    history.append(
-        {"role": "user", "content": message.content}
-    )  # Add user message to history
-
-    result = await cl.make_async(Runner.run_sync)(agent, input=history)
-
-    response_text = result.final_output
-    await cl.Message(content=response_text).send()
-
-    history.append({"role": "assistant", "content": response_text})
+    history.append({"role": "user", "content": message.content})
+    history.append({"role": "assistant", "content": reply})
     cl.user_session.set("history", history)
+
+    await cl.Message(content=reply).send()
