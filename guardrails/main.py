@@ -4,7 +4,7 @@ from agents import Agent, Runner
 import os
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from agents import input_guardrail, RunContextWrapper, TResponseInputItem, GuardrailFunctionOutput
+from agents import input_guardrail, RunContextWrapper, TResponseInputItem, GuardrailFunctionOutput,InputGuardrailTripwireTriggered
 import chainlit as cl
 
 load_dotenv()
@@ -18,7 +18,7 @@ client = AsyncOpenAI(
 )
 
 model = OpenAIChatCompletionsModel(
-    model="gpt-4o",
+    model="gemini-2.0-flash",
     openai_client=client
 )
 
@@ -47,15 +47,54 @@ async def input_guardrails_func(
         tripwire_triggered=not result.final_output.is_python_related
     )
 
-# ✅ MAIN AGENT: Move this OUTSIDE the function
+#  MAIN AGENT: Move this OUTSIDE the function
 main_agent = Agent(
-    name="Python Expert Agent",
-    instructions="You are a Python expert agent. You only respond to Python-related questions.",
-    model=model,
+    name="University Subject Expert",
+    instructions = (
+    "You are a subject matter expert AI assistant created by Aqsa Shah for students of the University of Sindh, "
+    "Batch 2025 (Second Semester). You specialize in answering questions related to the following subjects:\n\n"
+    "- Digital Logic Design\n"
+    "- Java and Java OOP\n"
+    "- Pre-Calculus\n"
+    "- Civics and Community Engagement\n"
+    "- Expository Writing\n"
+    "- Financial Accounting\n"
+    "- Islamic Studies\n\n"
+    "You should only respond to questions that are directly related to these subjects. Politely refuse to answer "
+    "unrelated topics. Your goal is to provide clear, accurate, and helpful answers to help students understand and "
+    "succeed in their coursework."
+),
     input_guardrails=[input_guardrails_func]
 )
 
 # Chainlit chat start
 @cl.on_chat_start
 async def on_chat_start():
-    await cl.Message(content="I'm ready to assist you!").send()
+    await cl.Message(content=(
+            "👋 **AssalamuAllaikum**\n\n"
+            "I'm your personalized academic assistant, created by *Aqsa Shah* specifically for **University of Sindh** students, **Batch 2025 (Second Semester)**.\n\n"
+            "📘 I'm specialized in the following subjects:\n"
+            "- Digital Logic Design\n"
+            "- Java & Java OOP\n"
+            "- Pre-Calculus\n"
+            "- Civics and Community Engagement\n"
+            "- Expository Writing\n"
+            "- Financial Accounting\n"
+            "- Islamic Studies\n\n"
+            "💡 Feel free to ask me any questions related to these subjects.\n"
+            "This assistant is available for unlimited use for the next **1 month**.\n\n"
+            "Let’s start learning together! 😊"
+        )
+    ).send()
+@cl.on_message
+async def on_message(message: cl.Message):
+    try:
+        result = await Runner.run(
+            main_agent,
+            input=message.content
+        )
+        print("Result:", result.final_output)
+        await cl.Message(content=result.final_output.reasoning).send()
+
+    except InputGuardrailTripwireTriggered:
+        await cl.Message(content="Please try subject related questions").send()
