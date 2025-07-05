@@ -3,3 +3,4 @@ agents
 openai
 python-dotenv
 pydantic
+tensorflow==1.15
