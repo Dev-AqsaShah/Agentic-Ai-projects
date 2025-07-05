@@ -1,6 +1,5 @@
 chainlit
-agents
 openai
 python-dotenv
 pydantic
-tensorflow==1.15
+tensorflow==2.17.1
