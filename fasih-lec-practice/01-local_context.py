@@ -10,63 +10,59 @@
 
 
 
-
-
-
-
-# ✅ Local Context:
+#? Local Context:
 # Local machine (ya local memory) ka context.
 
 # Fast, private, and no API cost.
 
 # Small-scale memory jese temporary variables ya user data.
 
-# ✅ LLM Context:
+#?  LLM Context:
 # Large Language Model (LLM) ko diya gaya context.
 
 # Basically wo data jo tum model ko "samjhane" k liye provide karti ho prompt ke zariye.
 
 # Iska use tab hota jab model ko kisi kaam ke liye relevant data chahiye ho.
 
-# 🔶 2. Local Context (Step-by-Step with Code)
-# 🧠 Use Case: Store user info locally without sending to LLM.
-# ✅ Step-by-step:
+#?  2. Local Context (Step-by-Step with Code)
+#  Use Case: Store user info locally without sending to LLM.
+#  Step-by-step:
 # from agents import RunContextWrapper — run context ko wrap karta hai.
 
 # Create class for local storage (e.g. UserInfo).
 
 # Use ctx.local to store/retrieve info.
 
-# ✅ 🔧 Example Code: Local Context
+# Example Code: Local Context
 # python
 # Copy code
-# # Step 1: Import necessary modules
+#? Step 1: Import necessary modules
 # from agents import RunContextWrapper
 # from pydantic import BaseModel
 
-# # Step 2: Define a model for user data using Pydantic
+#? Step 2: Define a model for user data using Pydantic
 # class UserInfo(BaseModel):
 #     name: str
 #     age: int
 
-# # Step 3: Create a wrapper around the context (usually provided in agents)
+#? Step 3: Create a wrapper around the context (usually provided in agents)
 # def main(ctx: RunContextWrapper):
 #     # Step 4: Store user info in local context
 #     ctx.local.user = UserInfo(name="Aqsa", age=22)
 
-#     # Step 5: Access and print that local info
+#? Step 5: Access and print that local info
 #     print(f"Hello {ctx.local.user.name}, you are {ctx.local.user.age} years old.")
 
-# # ✅ Yeh function kisi agent ke context mein run hota hai.
-# # For testing, you would simulate 'ctx' yourself.
-# 🔶 3. LLM Context (Step-by-Step with Code)
-# 🧠 Use Case: Jab tum chahti ho ke model ko specific context diya jae prompt mein.
-# ✅ Step-by-step:
+#?  Yeh function kisi agent ke context mein run hota hai.
+#? For testing, you would simulate 'ctx' yourself.
+#  3. LLM Context (Step-by-Step with Code)
+#  Use Case: Jab tum chahti ho ke model ko specific context diya jae prompt mein.
+#  Step-by-step:
 # ctx.llm.messages.append(...) – context add karo.
 
 # Is context k through model se sawal pocho ya task karwao.
 
-# ✅ 🔧 Example Code: LLM Context
+#? Example Code: LLM Context
 # python
 # Copy code
 # from agents import RunContextWrapper
@@ -85,16 +81,137 @@
 #         "content": user_question
 #     })
 
-#     # Step 3: Call the LLM to get a response
+#? Step 3: Call the LLM to get a response
 #     response = ctx.llm.complete()
 
-#     # Step 4: Print the answer from LLM
+#? Step 4: Print the answer from LLM
 #     print("LLM Answer:", response.content)
-# 🔶 4. Difference Table (Quick Recap)
+#  4. Difference Table (Quick Recap)
 # Feature	Local Context	LLM Context
 # Where Stored	Locally (RAM/memory)	In prompt/token of LLM
 # Use Case	Save user state, preferences	Give instructions/data to the model
 # Persistent?	No (unless coded)	No (context resets with each new call)
 # Privacy	High (local only)	Depends on API settings
 # Speed	Very fast	Slower (calls LLM)
+
+
+
+
+#!  Guardrails in OpenAI Agents SDK
+
+#* Rules, filters, ya constraints jo tum apne agent ke behavior ko control karne ke liye lagati ho — taake model kuch galat, risky, irrelevant ya unwanted reply na de.
+
+#* from agents import RunContextWrapper
+
+#* def main(ctx: RunContextWrapper):
+#*     user_input = ctx.input
+    
+#*     # Guardrail 1: Only allow Java-related questions
+#*     if "java" not in user_input.lower():
+#*         ctx.llm.messages.append({
+#*             "role": "assistant",
+#*             "content": "Sorry, I can only answer questions related to Java programming."
+#*         })
+#*         return
+    
+#*     # Else: normal LLM flow
+#*     ctx.llm.messages.append({"role": "user", "content": user_input})
+#*     response = ctx.llm.complete()
+#*     print(response.content)
+
+#? Why Are Guardrails Important?
+#? Benefit	Explanation
+#?  Safer Responses	Koi toxic ya harmful jawab nahi deta
+#?  Focused Agent	Sirf defined domain pe kaam karta hai
+#?  Control & Clarity	Tumhari terms par kaam karta hai
+#?  Avoid Hallucination	Agent kuch ghalat ya guesswork na kare
+
+
+#!  Full Example of OpenAI Agent SDK with:
+#! - Local Context
+#! - LLM Context
+#! - Guardrails (trigger + filter)
+#! - Step-by-step comments
+
+
+
+# from agents import agent, tool, RunContextWrapper
+# from pydantic import BaseModel
+
+#? Step 1: Define a local context model
+# task_history = []
+
+# class UserInfo(BaseModel):
+#     name: str
+#     age: int
+
+#? Step 2: Define a tool that the agent can use
+# @tool
+# def greet_user(name: str) -> str:
+#     """Returns a greeting message."""
+#     return f"Hello {name}, welcome to the Java Help Agent!"
+
+#? Step 3: Define the agent's main function
+# @agent
+# def main(ctx: RunContextWrapper):
+#     user_input = ctx.input.strip()
+
+    #?  Guardrail 1: Block inappropriate or non-java questions
+    # if not user_input.lower().startswith("java"):
+    #     ctx.llm.messages.append({
+    #         "role": "assistant",
+    #         "content": "Sorry, I can only answer questions related to Java programming."
+    #     })
+    #     return
+
+    #?  Store user info in local context
+    # ctx.local.user = UserInfo(name="Aqsa", age=22)
+
+    #?  Use tool for greeting (simulate logic flow)
+    # greeting = greet_user(ctx.local.user.name)
+    # print(greeting)  #* Optional: Log to console
+
+    #?  Add system prompt to guide LLM
+    # ctx.llm.messages.append({
+    #     "role": "system",
+    #     "content": "You are a Java expert helping students understand Java programming concepts."
+    # })
+
+    #? Add user input to chat
+    # ctx.llm.messages.append({
+    #     "role": "user",
+    #     "content": user_input
+    # })
+
+    #?  Get model's reply
+    # reply = ctx.llm.complete()
+    # print("LLM Reply:", reply.content)
+
+    #? Save history (optional)
+    # task_history.append({"question": user_input, "response": reply.content})
+
+    #? Final response
+    # ctx.llm.messages.append({
+    #     "role": "assistant",
+    #     "content": reply.content
+    # })
+
+#? Step 4 (Optional): Add a guardrail trigger via a separate function
+# @agent(trigger="shutdown")
+# def shutdown(ctx: RunContextWrapper):
+#     """Ends the agent with a goodbye message."""
+#     return "Agent shutting down. Thank you!"
+
+#! Note:
+# - This agent will only answer Java-related questions
+# - Uses a simple greeting tool
+# - Tracks user history (in memory only)
+# - Uses ctx.local and ctx.llm context management
+
+
+
+
+
+
+
 
