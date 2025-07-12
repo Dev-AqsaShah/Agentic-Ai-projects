@@ -210,7 +210,129 @@
 
 
 
+#! Dynamic Instructions – Kya Hotay Hain?
 
+#? Definition:
+#? Dynamic Instructions wo real-time prompts ya rules hotay hain jo tum runtime par model ko deti ho, taake wo apna behavior ya jawab usi waqt ke context ke mutabiq badal sake.
+
+#? Ye instructions:
+
+#? Predefined nahi hotay (jese system prompt har baar same ho)
+
+#? Balkay user input ya local data ke basis par runtime mein generate hotay ha
+
+
+#? Simple Example:
+#? 🔹 Static Instruction (hardcoded):
+
+#? “You are a helpful assistant.”
+
+#? 🔹 Dynamic Instruction (based on user name):
+
+#? “You are helping Aqsa, a 22-year-old student learning Java. Be polite and explain clearly.”
+
+
+
+# from agents import agent, RunContextWrapper
+# from pydantic import BaseModel
+
+# class UserInfo(BaseModel):
+#     name: str
+#     level: str  # beginner, intermediate, expert
+
+# @agent
+# def main(ctx: RunContextWrapper):
+#?Let's assume this user info is stored locally
+#     ctx.local.user = UserInfo(name="Aqsa", level="beginner")
+    
+#     user_input = ctx.input.strip()
+
+#?  Create dynamic instruction based on local context
+#     dynamic_instruction = f"""
+#     You are helping {ctx.local.user.name}, who is a {ctx.local.user.level} Java learner.
+#     Explain things clearly, with examples, and avoid complex jargon.
+#     """
+
+#? Add dynamic instruction to system prompt
+#     ctx.llm.messages.append({
+#         "role": "system",
+#         "content": dynamic_instruction.strip()
+#     })
+
+#? Add user input
+#     ctx.llm.messages.append({
+#         "role": "user",
+#         "content": user_input
+#     })
+
+#? Get response
+#     response = ctx.llm.complete()
+#     print(response.content)
+
+#? Add response back to message history
+#     ctx.llm.messages.append({
+#         "role": "assistant",
+#         "content": response.content
+#     })
+
+
+#!  Hands-off in OpenAI Agents SDK – Simple Explanation
+#? Definition:
+#? Hands-off mode ka matlab hota hai ke tum model ko full freedom deti ho taake wo khud decide kare kya karna hai, kaunsa tool chalana hai, aur kya jawab dena hai — bina developer ke manually control kiye
+
+
+#?  How to Enable Hands-off Mode?
+#? Actually, hands-off koi flag ya function nahi hota — jab tum model ko:
+
+#? Tools do
+
+#? Instructions do
+
+#? Aur usay freely run karne do
+
+#? Toh wo hands-off mode ban jaata hai.
+
+#?  Example: Hands-off Behavior with Tools
+#? python
+#? Copy
+#? Edit
+#? from agents import agent, tool, RunContextWrapper
+
+#! Step 1: Define a tool
+# @tool
+# def get_weather(city: str) -> str:
+#     return f"The weather in {city} is 35°C and sunny."
+
+#? Step 2: Agent with hands-off behavior
+# @agent
+# def main(ctx: RunContextWrapper):
+#? Hands-off instruction: model should decide what to do
+#     ctx.llm.messages.append({
+#         "role": "system",
+#         "content": "You are an assistant that helps with weather, news, and tax. Use tools as needed."
+#     })
+
+#     ctx.llm.messages.append({
+#         "role": "user",
+#         "content": ctx.input
+#     })
+
+#? LLM will decide whether to call tool or not
+# result = ctx.llm.complete()
+# print(\"Response:\", result.content)
+
+
+#!  Input Example (User says):
+#? "What's the weather in Karachi?"
+
+#!  Output:
+#? Model will automatically:
+
+#? Detect weather intent
+
+#? Use get_weather("Karachi")
+
+#? Return response
 
 
 
