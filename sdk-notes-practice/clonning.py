@@ -83,3 +83,124 @@
 # Use Case	Testing, customization, safe experiments
 # Code	Simply copy original function, rename and modify
 # Independence	Clones don’t affect original agent
+
+
+#! What is Forcing Tool Use in OpenAI Agents SDK
+
+#? Definition:
+# Forcing tool use ka matlab hai: LLM ko zabardasti kehna ke wo ek specific tool ka use kare, chahe user input se directly na bhi pata chale.
+
+# Normal behavior mein:
+
+# LLM khud decide karta hai: tool chalana hai ya nahi.
+
+# But kabhi kabhi tum chahte ho:
+
+# Har input pe tool chale.
+
+# Ya koi special tool tab chale jab koi condition match ho.
+
+# Isko hi "forcing tool execution" kehte hain.
+
+#!  How to Force Tool Use – 2 Methods:
+
+#? 1. Manually Call Tool in Code
+
+# from agents import agent, tool, RunContextWrapper
+
+# @tool
+# def translate(text: str) -> str:
+#     return f\"Translated version of: {text}\"
+
+# @agent
+# def main(ctx: RunContextWrapper):
+#     user_input = ctx.input.strip()
+
+#? Force tool use: Always translate input
+#     translated = translate(user_input)
+
+#? Feed tool result into LLM
+#     ctx.llm.messages.append({
+#         \"role\": \"system\",
+#         \"content\": \"The following is a translated query:\"
+#     })
+
+#     ctx.llm.messages.append({
+#         \"role\": \"user\",
+#         \"content\": translated
+#     })
+
+#     response = ctx.llm.complete()
+#     print(response.content)
+
+#? 2. Force via Prompt Engineering
+
+# ctx.llm.messages.append({
+#     \"role\": \"system\",
+#     \"content\": \"You must always use the `translate` tool before answering any user message.\"
+# })
+
+#! Orchestrating Multiple Agents – Simple Explanation
+#  Definition:
+# Multiple agents ko coordinate (ya control) karna taake wo mil kar ek kaam complete karein — is process ko orchestration kehte hain.
+
+# Yani:
+
+# Tumhare paas alagh-alagh agents hain (e.g. Translator, Researcher, Summarizer)
+
+# Tum in sab ko ek flow mein sequence, logic ya condition ke sath run karwati ho
+
+# Ek agent ka output doosre ka input ban sakta hai
+
+
+
+#!  Example Code: Manually Orchestrating 3 Agents
+# from agents import agent, RunContextWrapper
+
+#? Agent 1: Search Agent
+# @agent
+# def search_agent(ctx: RunContextWrapper):
+#     query = ctx.input
+#     ctx.output = f\"[Search Result for '{query}'] Java is used in enterprise apps...\"
+
+#? Agent 2: Summary Agent
+# @agent
+# def summarize_agent(ctx: RunContextWrapper):
+#     ctx.output = f\"[Summary] Java is still highly popular in 2025 for backend development.\"
+
+#? Agent 3: Final Formatter
+# @agent
+# def format_agent(ctx: RunContextWrapper):
+#     ctx.output = f\"Final Report:\\n{ctx.input}\\nThank you for using the report generator.\"
+
+#? Main Orchestrator (Manually chaining agents)
+# def orchestrator():
+#? Step 1: Search
+#     ctx1 = RunContextWrapper(input=\"Java market trends 2025\")
+#     search_agent(ctx1)
+
+#? Step 2: Summarize
+#     ctx2 = RunContextWrapper(input=ctx1.output)
+#     summarize_agent(ctx2)
+
+#? Step 3: Format
+#     ctx3 = RunContextWrapper(input=ctx2.output)
+#     format_agent(ctx3)
+
+#? Final Output
+#     print(ctx3.output)
+
+#? Run the full orchestrated process
+# orchestrator()
+
+
+#! Output:
+#? Final Report:
+# [Summary] Java is still highly popular in 2025 for backend development.
+# Thank you for using the report generator.
+
+
+
+
+
+
