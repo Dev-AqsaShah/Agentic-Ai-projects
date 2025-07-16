@@ -11,7 +11,7 @@
 
 # Experiment/test kar sakti ho bina asli agent ko affect kiye
 
-# 📌 Use Cases of Cloning an Agent
+#  Use Cases of Cloning an Agent
 # Scenario	Purpose
 # ✅ Testing	Original agent safe rahe, clone pe test karo
 # ✅ A/B Experiments	Alag prompts ke sath 2 clones run kar ke compare karo
@@ -21,9 +21,7 @@
 # 🔧 Example: Clone Agent Manually in Code
 # Agar tum main_agent bana chuki ho, toh tum uska clone bana sakti ho jese:
 
-# python
-# Copy
-# Edit
+
 # from agents import agent, RunContextWrapper
 
 #? ✅ Original agent
@@ -56,14 +54,12 @@
 # 📁 Clone via Files (Advanced)
 # Agar tum agents.yaml ya tools.json use karti ho, to tum ek agent ka YAML block copy-paste karke name change karke clone bana sakti ho:
 
-# yaml
-# Copy
-# Edit
+
 # agents:
 #   - name: main_agent
 #     entrypoint: main.py:main
 #     tools: [greet_user]
-  
+
 #   - name: main_agent_clone
 #     entrypoint: main.py:cloned_agent
 #     tools: [greet_user]
@@ -202,5 +198,81 @@
 
 
 
+#! streaming
 
+#! Streaming in OpenAI Agents SDK – Roman Urdu Explanation
+#?  Streaming ka Matlab
+# Jab agent step-by-step kaam kar raha hota hai, to tum har step ka live update dekh sakti ho — jaise hi LLM text generate karta hai, ya koi tool chalta hai.
+
+#? Iska faida yeh hota hai:
+
+# Real-time progress dikhana user ko
+
+# Live output print karna
+
+# User ko wait nahi karwana pura response ka
+
+#? ✅ 1. Runner.run_streamed() kaam kya karta hai?
+# Ye function agent ko streamed (live mode) mein run karta hai. 
+# result = Runner.run_streamed(agent, input="Hello")
+
+#? ✅ 2. result.stream_events() kya karta hai?
+# Ye ek async stream return karta hai jisme tum har event ko ek-ek karke read karti ho — jese:
+
+# Text ka token aa raha ho (Hello, world, etc)
+
+# Tool chala ho
+
+# Message generate hua ho
+
+#? 🔹 3. Raw Event (LLM Token-by-token)
+
+# if event.type == "raw_response_event":
+#     print(event.data.delta)
+#  Matlab:
+# Jaise hi LLM ek word ya token likhta hai, wo turant print hota hai.
+
+# Yeh live typing jesa feel deta hai.
+
+#? 🔹 4. High-Level Events (Tool ya Message Updates)
+
+# elif event.type == "run_item_stream_event":
+#     # tool call, tool output, message output
+# Yahan 3 main cheezein stream hoti hain:
+
+# Type	Matlab
+# tool_call_item	Tool chal gaya
+# tool_call_output_item	Tool ka result mil gaya
+# message_output_item	Agent ne user ko final message bhej diya
+
+#? 🔹 5. Agent Updated Event
+
+# elif event.type == "agent_updated_stream_event":
+#     print(event.new_agent.name)
+# Agar agent handoff ya change ho jaye during process, tumhe pata chal jata hai.
+
+
+#! Overall Flow Samajho:
+# 1. User ne bola "Tell me 5 jokes"
+# 2. Agent ne pehle tool call kiya `how_many_jokes()`
+# 3. Tool ne bola: "Give 7 jokes"
+# 4. Agent ne 7 jokes token by token likhna start kiya
+# 5. Har token stream ho raha hai screen par
+# 6. End mein agent ne message complete kiya
+
+
+#!  Roman Urdu Summary – Points mein:
+# Streaming ka matlab hai live output dikhana step by step.
+
+# Tum Runner.run_streamed() use karti ho agent ko live chalane ke liye.
+
+# result.stream_events() async loop deta hai jahan har event milta hai.
+
+# raw_response_event LLM ka token-by-token output deta hai (like typing effect).
+
+# run_item_stream_event se pata chalta hai tool kab chala, kya output aya, aur message kab bana.
+
+# agent_updated_stream_event se pata chalta hai agent change hua ya handoff hua.
+
+# Ye system tumhare AI app ko interactive aur responsive banata hai — perfect for chatbots, dashboards, ya web UIs. 
 
