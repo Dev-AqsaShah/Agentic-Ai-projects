@@ -276,3 +276,116 @@
 
 # Ye system tumhare AI app ko interactive aur responsive banata hai — perfect for chatbots, dashboards, ya web UIs. 
 
+
+#! Tools in Agents SDK – Easy Roman Urdu Explanation
+# Tools woh hotay hain jise Agent use karta hai action lene ke liye — jaise data lana, code chalana, translation, file read karna, image generate karna, etc.
+
+
+#! Hosted Tools – Built-in Tools from OpenAI
+# Ye tools tumhe milte hain bina custom code likhe — sirf include karo aur kaam chalu.
+
+
+#! Function Calling – Python Function as Tool
+# Tum koi bhi Python function @function_tool laga ke tool bana sakti ho. Agent us function ko call karega jab zarurat ho.
+
+
+# ✅ Example:
+# @function_tool
+# async def fetch_weather(location: dict) -> str:
+#     return "Today is sunny."
+
+# @function_tool(name_override="read_file")
+# def read_file(ctx, path: str) -> str:
+#     return "<File content here>"
+# 🧠 Automatic Benefits:
+# Function ka name → tool ka naam
+
+# Docstring se description bhi ban jaata hai
+
+# Function ke arguments → tool ke input schema
+
+#? 3. Custom Function Tool (Manual)
+# Agar tum khud tool banana chahti ho bina @function_tool decorator, to FunctionTool(...) ka use karo aur on_invoke_tool() define karo.
+
+
+# ✅ Example:
+# from agents import FunctionTool
+# from pydantic import BaseModel
+
+# class Args(BaseModel):
+#     username: str
+#     age: int
+
+# async def run_tool(ctx, args: str) -> str:
+#     parsed = Args.model_validate_json(args)
+#     return f"{parsed.username} is {parsed.age} years old"
+
+# tool = FunctionTool(
+#     name="process_user",
+#     description="Process user data",
+#     params_json_schema=Args.model_json_schema(),
+#     on_invoke_tool=run_tool
+# )
+
+#? 4. Agents as Tools
+# Tum ek agent ko doosre agent ka tool bana sakti ho, taake ek central agent unse kaam karwaye (without full handoff).
+
+
+# ✅ Example:
+# spanish_agent = Agent(name="Spanish", instructions="Translate to Spanish")
+# french_agent = Agent(name="French", instructions="Translate to French")
+
+# orchestrator_agent = Agent(
+#     name="Main",
+#     instructions="Use tools to translate.",
+#     tools=[
+#         spanish_agent.as_tool(tool_name="to_spanish", tool_description="Translate to Spanish"),
+#         french_agent.as_tool(tool_name="to_french", tool_description="Translate to French")
+#     ]
+# )
+# 🧪 5. Custom Output Extraction
+# Agar tum agent-tool ka output filter, clean, ya JSON format mein extract karna chahti ho — to custom_output_extractor use karo.
+
+
+# ✅ Example:
+# async def extract_json_payload(run_result):
+#     for item in reversed(run_result.new_items):
+#         if item.output.strip().startswith("{"):
+#             return item.output
+#     return "{}"
+
+# json_tool = data_agent.as_tool(
+#     tool_name="get_json_data",
+#     tool_description="Only return JSON",
+#     custom_output_extractor=extract_json_payload
+# )
+
+#? 6. Tool Error Handling
+# Agar function-tool mein error aata hai, to tum:
+
+# Default error message bhej sakti ho
+
+# Ya apna custom error message de sakti ho
+
+# Ya exception ko re-raise bhi kar sakti ho (advance)
+
+# ✅ Example:
+# @function_tool(failure_error_function=my_custom_error_function)
+# def my_tool(): ...
+
+
+#! Roman Urdu Summary – Important Points:
+# 3 types ke tools hain: Hosted, Function, Agents-as-tools
+
+# Hosted tools → ready-made tools by OpenAI (web, image, shell, etc.)
+
+# Function tools → tumhare Python functions tools ban jaate hain with @function_tool
+
+# Agents as tools → ek agent doosre agent ko tool ki tarah use karta hai
+
+# Automatic input schema & description milta hai from function signature
+
+# Custom output extractor use karo agar sirf JSON ya clean response chahiye
+
+# Tool crash ho to tum custom error bhi bhej sakti ho model ko
+
